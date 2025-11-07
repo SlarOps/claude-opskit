@@ -1,7 +1,7 @@
 {
-    "name": "claude-plugin",
+    "name": "devops-agents-plugins",
     "owner": {
-      "name": "chon.le",
+      "name": "slarops",
       "email": "vanchonlee@gmail.com"
     },
     "metadata": {
