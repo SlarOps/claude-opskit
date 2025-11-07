@@ -1,0 +1,22 @@
+{
+    "name": "claude-plugin",
+    "owner": {
+      "name": "chon.le",
+      "email": "vanchonlee@gmail.com"
+    },
+    "metadata": {
+      "description": "Devops plugins for Claude",
+      "version": "1.0.0"
+    },
+    "plugins": [
+      {
+        "name": "datadog-incident-metrics",
+        "description": "Datadog incident metrics plugin for Claude",
+        "source": "./",
+        "strict": false,
+        "skills": [
+          "./datadog-incident-metrics"
+        ]
+      }
+    ]
+  }
