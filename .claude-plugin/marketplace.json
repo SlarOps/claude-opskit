@@ -10,13 +10,10 @@
     },
     "plugins": [
       {
-        "name": "datadog-incident-metrics",
+        "name": "datadog",
         "description": "Datadog incident metrics plugin for Claude",
-        "source": "./",
-        "strict": false,
-        "skills": [
-          "./datadog-incident-metrics"
-        ]
+        "source": "./plugins/datadog",
+        "strict": false
       }
     ]
   }

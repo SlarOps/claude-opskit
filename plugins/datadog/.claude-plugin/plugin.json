@@ -1,0 +1,14 @@
+{
+    "name": "datadog",
+    "version": "1.0.0",
+    "description": "Datadog incident metrics plugin for Claude",
+    "author": {
+      "name": "SlarOps",
+      "email": "vanchonlee@gmail.com",
+      "url": "https://github.com/slarops"
+    },
+    "homepage": "https://github.com/slarops/claude-opskit",
+    "repository": "https://github.com/slarops/claude-opskit",
+    "license": "MIT",
+    "keywords": ["datadog", "incident", "metrics"]
+  }
