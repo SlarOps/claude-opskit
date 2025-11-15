@@ -106,6 +106,7 @@ class DatadogMetricsQuery:
         self,
         components: List[str],
         metric_types: List[str],
+        tag_type: str = 'service',
         tag_filters: Optional[Dict[str, str]] = None
     ) -> Dict[str, List[str]]:
         """Build Datadog metric queries for components.
@@ -113,6 +114,7 @@ class DatadogMetricsQuery:
         Args:
             components: List of service/component names
             metric_types: List of metric types to query (cpu, memory, error_rate, rps)
+            tag_type: Type of primary tag to use (service, host, instance, etc.)
             tag_filters: Optional dict of tag filters (e.g., {"env": "production"})
 
         Returns:
@@ -128,8 +130,8 @@ class DatadogMetricsQuery:
 
             for component in components:
                 for metric in self.METRIC_PATTERNS[metric_type]:
-                    # Build tag filter string
-                    tags = [f"service:{component}"]
+                    # Build tag filter string with flexible tag type
+                    tags = [f"{tag_type}:{component}"]
                     if tag_filters:
                         tags.extend([f"{k}:{v}" for k, v in tag_filters.items()])
 
@@ -147,6 +149,7 @@ class DatadogMetricsQuery:
         metric_types: List[str] = ['cpu', 'memory', 'error_rate', 'rps'],
         before_minutes: int = 30,
         after_minutes: int = 30,
+        tag_type: str = 'service',
         tag_filters: Optional[Dict[str, str]] = None
     ) -> Dict:
         """Query all metrics for incident analysis.
@@ -157,6 +160,7 @@ class DatadogMetricsQuery:
             metric_types: Types of metrics to query
             before_minutes: Minutes before incident to include
             after_minutes: Minutes after incident to include
+            tag_type: Type of primary tag to use (service, host, instance, etc.)
             tag_filters: Optional dict of tag filters
 
         Returns:
@@ -172,10 +176,11 @@ class DatadogMetricsQuery:
         print(f"Querying metrics from {start_time} to {end_time}")
         print(f"Components: {', '.join(components)}")
         print(f"Metric types: {', '.join(metric_types)}")
+        print(f"Tag type: {tag_type}")
         print()
 
         # Build queries
-        queries = self.build_queries(components, metric_types, tag_filters)
+        queries = self.build_queries(components, metric_types, tag_type, tag_filters)
 
         # Execute queries
         results = {
@@ -188,10 +193,16 @@ class DatadogMetricsQuery:
                     'from_ts': from_ts,
                     'to_ts': to_ts
                 },
-                'metric_types': metric_types
+                'metric_types': metric_types,
+                'tag_type': tag_type
             },
             'metrics': {}
         }
+
+        total_queries = sum(len(query_list) for query_list in queries.values())
+        successful_queries = 0
+        failed_queries = 0
+        no_data_queries = 0
 
         for metric_type, query_list in queries.items():
             results['metrics'][metric_type] = {}
@@ -217,18 +228,46 @@ class DatadogMetricsQuery:
                             'series': result['series']
                         })
                         print(f"  ✓ Found data for {component} - {metric_name}")
+                        successful_queries += 1
                     else:
                         print(f"  ✗ No data")
+                        no_data_queries += 1
 
                 except Exception as e:
                     print(f"  ✗ Error: {str(e)}")
+                    failed_queries += 1
+
+        # Print summary
+        print(f"\n{'='*60}")
+        print(f"Query Summary:")
+        print(f"  Total queries: {total_queries}")
+        print(f"  Successful: {successful_queries}")
+        print(f"  No data: {no_data_queries}")
+        print(f"  Failed: {failed_queries}")
+
+        if successful_queries == 0:
+            print(f"\n⚠️  WARNING: No data found for any queries!")
+            print(f"   Please check:")
+            print(f"   - Component names are correct: {', '.join(components)}")
+            print(f"   - Tag type is correct: {tag_type}")
+            print(f"   - Time range has data: {start_time} to {end_time}")
+            print(f"   - Components are reporting metrics to Datadog")
+        print(f"{'='*60}\n")
+
+        results['metadata']['query_summary'] = {
+            'total': total_queries,
+            'successful': successful_queries,
+            'no_data': no_data_queries,
+            'failed': failed_queries
+        }
 
         return results
 
     def _extract_component(self, query: str, components: List[str]) -> str:
         """Extract component name from query."""
         for component in components:
-            if f"service:{component}" in query:
+            # Check for any tag type (service:, host:, instance:, etc.)
+            if f":{component}" in query:
                 return component
         return "unknown"
 
@@ -313,6 +352,13 @@ def main():
     )
 
     parser.add_argument(
+        '--tag-type',
+        type=str,
+        default='service',
+        help='Primary tag type to use for component filtering (default: service). Common values: service, host, instance, container_name'
+    )
+
+    parser.add_argument(
         '--tags',
         type=str,
         help='Additional tag filters (e.g., "env:production,region:us-east-1")'
@@ -381,6 +427,7 @@ def main():
         metric_types=metric_types,
         before_minutes=args.before,
         after_minutes=args.after,
+        tag_type=args.tag_type,
         tag_filters=tag_filters
     )
 
